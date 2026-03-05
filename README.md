@@ -1,63 +1,87 @@
 # GrowUp
 
-Full-stack starter for GrowUp with:
-- React frontend
-- Express + MongoDB backend
-- JWT authentication
-- Redux auth state
+GrowUp is a full-stack stock market simulator built with React, Redux, Express, and MongoDB. It includes JWT authentication, portfolio and watchlist management, and live market quote streaming.
 
-## Requirements
+## Core Features
 
-- Node.js `v16+` and `npm`
-- MongoDB Community Server
-- Git
-- Postman
+- User registration/login with JWT access tokens and refresh sessions
+- Role-aware authorization for admin and user endpoints
+- Portfolio CRUD with "current user" and by-id operations
+- Transaction tracking and bulk transaction reset
+- Watchlist CRUD with item-level updates
+- Stock quote APIs with Server-Sent Events (SSE) streams
+- Admin stock catalog management
+- Market index snapshot and stream endpoints
 
-## Install Requirements
+## Tech Stack
 
-### Node.js and npm
-
-Check installed versions:
-
-```powershell
-node -v
-npm -v
-```
-
-### MongoDB (Windows)
-
-Install via `winget`:
-
-```powershell
-winget install --id MongoDB.Server --source winget --accept-package-agreements --accept-source-agreements
-```
-
-Then verify:
-
-```powershell
-mongod --version
-```
+- Frontend: React 19, Redux Toolkit, React Router, Axios, Chart.js
+- Backend: Node.js, Express 5, MongoDB + Mongoose, JWT, bcrypt
 
 ## Project Structure
 
 ```text
-client/
-  src/                # React app
-  server/             # Express API
-    src/
-    postman/
+.
+|-- src/                  # React application
+|-- public/               # Static frontend assets
+|-- server/
+|   |-- src/              # Express app, routes, controllers, models
+|   `-- postman/          # API collection for testing
+|-- .env.example
+`-- server/.env.example
 ```
 
-## Environment Variables
+## Prerequisites
 
-Create local env files from examples:
+- Node.js (v18+ recommended)
+- npm
+- MongoDB Community Server
+
+## Quick Start
+
+1. Install dependencies.
+
+```powershell
+npm install
+cd .\server
+npm install
+cd ..
+```
+
+2. Create environment files from examples.
 
 ```powershell
 Copy-Item .env.example .env
 Copy-Item .\server\.env.example .\server\.env
 ```
 
-`server/.env`:
+3. Start the backend API.
+
+```powershell
+cd .\server
+npm run dev
+```
+
+4. Start the frontend in a second terminal.
+
+```powershell
+npm start
+```
+
+5. Open the app.
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:5000`
+
+## Environment Variables
+
+### Frontend (`/.env`)
+
+```env
+REACT_APP_API_URL=http://localhost:5000
+```
+
+### Backend (`/server/.env`)
 
 ```env
 MONGODB_URI=mongodb://127.0.0.1:27017/smartbridge
@@ -72,91 +96,75 @@ FINNHUB_API_KEY=
 PORT=5000
 ```
 
-`STOCK_QUOTE_PROVIDER` options:
-- `auto` (default): tries Finnhub first when `FINNHUB_API_KEY` exists, then Yahoo
-- `finnhub`: prioritize Finnhub, fallback to Yahoo
-- `yahoo`: prioritize Yahoo, fallback to Finnhub
+`STOCK_QUOTE_PROVIDER` values:
 
-`/.env`:
+- `auto`: use Finnhub when `FINNHUB_API_KEY` exists, else fallback to Yahoo
+- `finnhub`: prefer Finnhub, fallback to Yahoo
+- `yahoo`: prefer Yahoo, fallback to Finnhub
 
-```env
-REACT_APP_API_URL=http://localhost:5000
-```
+## Scripts
 
-## Install Dependencies
+### Frontend (root)
 
-Frontend:
+- `npm start` - run React dev server
+- `npm run build` - create production build
+- `npm test` - run test suite
 
-```powershell
-npm install
-```
+### Backend (`server/`)
 
-Backend:
+- `npm run dev` - run API with nodemon
+- `npm start` - run API with Node.js
+- `npm run migrate` - execute DB migration script
 
-```powershell
-cd .\server
-npm install
-```
+## API Overview
 
-## Run Application
+Base URL: `http://localhost:5000/api`
 
-Start backend API:
+Public routes:
 
-```powershell
-cd .\server
-npm run dev
-```
+- `GET /health`
+- `GET /market/indexes`
+- `GET /market/indexes/stream`
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
 
-Start frontend app (new terminal):
+Protected routes (Bearer token required):
 
-```powershell
-npm start
-```
+- `GET /auth/me`
+- `POST /auth/logout-all`
+- `GET /users/me`
+- `GET /stocks`
+- `GET /stocks/quotes?symbols=AAPL,MSFT`
+- `GET /stocks/quotes/stream?symbols=AAPL,MSFT`
+- `GET|POST /portfolios`
+- `GET|PATCH|DELETE /portfolios/me`
+- `GET|PATCH|DELETE /portfolios/:id`
+- `GET|POST|DELETE /transactions`
+- `GET|PUT|DELETE /transactions/:id`
+- `GET|POST /watchlists`
+- `GET|PUT|DELETE /watchlists/me`
+- `POST /watchlists/me/items`
+- `PATCH|DELETE /watchlists/me/items/:stockId`
+- `GET|PUT|DELETE /watchlists/:id`
+- `GET|POST /admin/stocks` (admin only)
+- `GET|PUT|DELETE /admin/stocks/:id` (admin only)
 
-Frontend URL: `http://localhost:3000`  
-Backend URL: `http://localhost:5000`
+## Postman
 
-## API Endpoints
+Import:
 
-- `GET /api/health`
-- `GET /api/market/indexes`
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/refresh` (refresh-token cookie required)
-- `POST /api/auth/logout`
-- `POST /api/auth/logout-all` (Bearer token required)
-- `GET /api/auth/me` (Bearer token required)
-- `GET /api/stocks` (Bearer token required)
-- `GET /api/stocks/quotes?symbols=AAPL,MSFT` (Bearer token required)
-- `GET /api/stocks/quotes/stream?symbols=AAPL,MSFT` (SSE, Bearer token required)
+- `server/postman/SmartBridge.postman_collection.json`
 
-## Postman Testing
+Suggested test flow:
 
-Import this collection:
-
-- `server/postman/SmartBridge.postman_collection.json` (GrowUp API collection)
-
-Steps:
 1. Run `Register`
 2. Run `Login`
-3. Copy `token` from login response
+3. Copy `token` from the response body
 4. Set collection variable `token`
-5. Run `Get Current User`
+5. Execute protected routes
 
-## Git Version Control
+## Release Process
 
-Initialize and commit:
-
-```powershell
-git init
-git add .
-git commit -m "Initial GrowUp full-stack setup"
-```
-
-If the repo already exists:
-
-```powershell
-git status
-git add .
-git commit -m "Add backend auth API, env config, and Postman collection"
-```
+See `RELEASE_CHECKLIST.md` for a complete pre-release and publishing checklist.
