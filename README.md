@@ -1,70 +1,162 @@
-# Getting Started with Create React App
+# GrowUp
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Full-stack starter for GrowUp with:
+- React frontend
+- Express + MongoDB backend
+- JWT authentication
+- Redux auth state
 
-## Available Scripts
+## Requirements
 
-In the project directory, you can run:
+- Node.js `v16+` and `npm`
+- MongoDB Community Server
+- Git
+- Postman
 
-### `npm start`
+## Install Requirements
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Node.js and npm
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Check installed versions:
 
-### `npm test`
+```powershell
+node -v
+npm -v
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### MongoDB (Windows)
 
-### `npm run build`
+Install via `winget`:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```powershell
+winget install --id MongoDB.Server --source winget --accept-package-agreements --accept-source-agreements
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Then verify:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```powershell
+mongod --version
+```
 
-### `npm run eject`
+## Project Structure
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```text
+client/
+  src/                # React app
+  server/             # Express API
+    src/
+    postman/
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Environment Variables
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Create local env files from examples:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```powershell
+Copy-Item .env.example .env
+Copy-Item .\server\.env.example .\server\.env
+```
 
-## Learn More
+`server/.env`:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017/smartbridge
+JWT_SECRET=replace_with_a_long_random_secret
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_DAYS=14
+BCRYPT_SALT_ROUNDS=12
+CLIENT_URL=http://localhost:3000
+DEFAULT_ADMIN_EMAIL=
+STOCK_QUOTE_PROVIDER=auto
+FINNHUB_API_KEY=
+PORT=5000
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+`STOCK_QUOTE_PROVIDER` options:
+- `auto` (default): tries Finnhub first when `FINNHUB_API_KEY` exists, then Yahoo
+- `finnhub`: prioritize Finnhub, fallback to Yahoo
+- `yahoo`: prioritize Yahoo, fallback to Finnhub
 
-### Code Splitting
+`/.env`:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```env
+REACT_APP_API_URL=http://localhost:5000
+```
 
-### Analyzing the Bundle Size
+## Install Dependencies
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Frontend:
 
-### Making a Progressive Web App
+```powershell
+npm install
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Backend:
 
-### Advanced Configuration
+```powershell
+cd .\server
+npm install
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Run Application
 
-### Deployment
+Start backend API:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+```powershell
+cd .\server
+npm run dev
+```
 
-### `npm run build` fails to minify
+Start frontend app (new terminal):
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```powershell
+npm start
+```
+
+Frontend URL: `http://localhost:3000`  
+Backend URL: `http://localhost:5000`
+
+## API Endpoints
+
+- `GET /api/health`
+- `GET /api/market/indexes`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/refresh` (refresh-token cookie required)
+- `POST /api/auth/logout`
+- `POST /api/auth/logout-all` (Bearer token required)
+- `GET /api/auth/me` (Bearer token required)
+- `GET /api/stocks` (Bearer token required)
+- `GET /api/stocks/quotes?symbols=AAPL,MSFT` (Bearer token required)
+- `GET /api/stocks/quotes/stream?symbols=AAPL,MSFT` (SSE, Bearer token required)
+
+## Postman Testing
+
+Import this collection:
+
+- `server/postman/SmartBridge.postman_collection.json` (GrowUp API collection)
+
+Steps:
+1. Run `Register`
+2. Run `Login`
+3. Copy `token` from login response
+4. Set collection variable `token`
+5. Run `Get Current User`
+
+## Git Version Control
+
+Initialize and commit:
+
+```powershell
+git init
+git add .
+git commit -m "Initial GrowUp full-stack setup"
+```
+
+If the repo already exists:
+
+```powershell
+git status
+git add .
+git commit -m "Add backend auth API, env config, and Postman collection"
+```
