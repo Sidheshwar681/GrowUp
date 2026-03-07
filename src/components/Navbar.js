@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavLink } from 'react-router-dom';
 import api from '../api/client';
@@ -9,6 +9,7 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const { user, token } = useSelector((state) => state.auth);
   const [isOpen, setIsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const publicLinks = [
     { to: '/', label: 'Home' },
@@ -31,6 +32,69 @@ const Navbar = () => {
   }
 
   const links = [...publicLinks, ...authLinks];
+
+  const profileFeatures = useMemo(() => {
+    if (!token) {
+      return [];
+    }
+
+    const features = [
+      { to: '/dashboard', label: 'Overview', hint: 'Snapshot of your account' },
+      { to: '/portfolio', label: 'Portfolio', hint: 'View holdings and total P&L' },
+      { to: '/watchlist', label: 'Watchlist', hint: 'Track symbols you follow' },
+      { to: '/trade', label: 'Trade Desk', hint: 'Place and review your orders' },
+      { to: '/stocks', label: 'Market Explorer', hint: 'Browse live market quotes' },
+      { to: '/', label: 'Home Feed', hint: 'Latest platform updates' },
+    ];
+
+    if (user?.role === 'admin') {
+      features[5] = {
+        to: '/admin/stocks',
+        label: 'Admin Stocks',
+        hint: 'Manage stock catalog entries',
+      };
+    }
+
+    return features;
+  }, [token, user?.role]);
+
+  const profileName = user?.name || user?.email || 'User';
+  const profileInitial = profileName.trim().charAt(0).toUpperCase();
+  const profileMeta = user?.role === 'admin' ? 'Administrator' : 'Trader';
+
+  useEffect(() => {
+    if (!isProfileOpen) {
+      return undefined;
+    }
+
+    const handleKeydown = (event) => {
+      if (event.key === 'Escape') {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+    return () => {
+      document.removeEventListener('keydown', handleKeydown);
+    };
+  }, [isProfileOpen]);
+
+  useEffect(() => {
+    if (!token) {
+      setIsProfileOpen(false);
+    }
+  }, [token]);
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch (_error) {
+      // Local logout should still proceed if server logout fails.
+    }
+    dispatch(logout());
+    setIsOpen(false);
+    setIsProfileOpen(false);
+  };
 
   return (
     <header className="navbar-shell">
@@ -70,51 +134,123 @@ const Navbar = () => {
           </span>
         </NavLink>
 
-        <button
-          className={`nav-toggle ${isOpen ? 'active' : ''}`}
-          type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
-          aria-label="Toggle navigation menu"
-          aria-expanded={isOpen}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        <div className="navbar-right">
+          <button
+            className={`nav-toggle ${isOpen ? 'active' : ''}`}
+            type="button"
+            onClick={() => {
+              setIsOpen((prev) => !prev);
+              setIsProfileOpen(false);
+            }}
+            aria-label="Toggle navigation menu"
+            aria-expanded={isOpen}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
 
-        <ul className={`navbar-links ${isOpen ? 'open' : ''}`}>
-          {links.map((link) => (
-            <li key={link.to}>
-              <NavLink
-                to={link.to}
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                onClick={() => setIsOpen(false)}
-              >
-                {link.label}
-              </NavLink>
-            </li>
-          ))}
+          <ul className={`navbar-links ${isOpen ? 'open' : ''}`}>
+            {links.map((link) => (
+              <li key={link.to}>
+                <NavLink
+                  to={link.to}
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsProfileOpen(false);
+                  }}
+                >
+                  {link.label}
+                </NavLink>
+              </li>
+            ))}
+            {token ? (
+              <li>
+                <button
+                  type="button"
+                  className="nav-link"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              </li>
+            ) : null}
+          </ul>
+
           {token ? (
-            <li>
+            <button
+              type="button"
+              className={`profile-trigger ${isProfileOpen ? 'active' : ''}`}
+              onClick={() => {
+                setIsProfileOpen((prev) => !prev);
+                setIsOpen(false);
+              }}
+              aria-expanded={isProfileOpen}
+              aria-label="Toggle profile sidebar"
+            >
+              <span className="profile-avatar" aria-hidden="true">{profileInitial}</span>
+              <span className="profile-trigger-copy">
+                <strong>{profileName}</strong>
+                <small>{profileMeta}</small>
+              </span>
+            </button>
+          ) : null}
+        </div>
+      </nav>
+
+      {token ? (
+        <>
+          <button
+            type="button"
+            className={`profile-backdrop ${isProfileOpen ? 'open' : ''}`}
+            onClick={() => setIsProfileOpen(false)}
+            aria-label="Close profile sidebar"
+          />
+
+          <aside
+            className={`profile-sidebar ${isProfileOpen ? 'open' : ''}`}
+            aria-hidden={!isProfileOpen}
+          >
+            <div className="profile-sidebar-header">
+              <div className="profile-sidebar-user">
+                <span className="profile-avatar large" aria-hidden="true">{profileInitial}</span>
+                <div className="profile-sidebar-copy">
+                  <strong>{profileName}</strong>
+                  <span>{user?.email}</span>
+                </div>
+              </div>
               <button
                 type="button"
-                className="nav-link"
-                onClick={async () => {
-                  try {
-                    await api.post('/api/auth/logout');
-                  } catch (_error) {
-                    // Local logout should still proceed if server logout fails.
-                  }
-                  dispatch(logout());
-                  setIsOpen(false);
-                }}
+                className="profile-close"
+                onClick={() => setIsProfileOpen(false)}
+                aria-label="Close profile sidebar"
               >
-                Logout
+                x
               </button>
-            </li>
-          ) : null}
-        </ul>
-      </nav>
+            </div>
+
+            <ul className="profile-feature-list">
+              {profileFeatures.map((feature) => (
+                <li key={feature.to}>
+                  <NavLink
+                    to={feature.to}
+                    className={({ isActive }) => `profile-feature ${isActive ? 'active' : ''}`}
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    <span>{feature.label}</span>
+                    <small>{feature.hint}</small>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+
+            <button type="button" className="profile-signout" onClick={handleLogout}>
+              Sign Out
+            </button>
+          </aside>
+        </>
+      ) : null}
     </header>
   );
 };
